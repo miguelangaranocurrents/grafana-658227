@@ -1039,7 +1039,8 @@ class MomentCompat implements MomentLike {
     }
 
     // like moment-timezone, converting to a zone without data leaves the moment untouched
-    if (normalizeZoneName(zone) !== 'UTC' && !isKnownZoneName(normalizeZoneName(zone))) {
+    const zoneName = normalizeZoneName(zone);
+    if (zoneName !== 'UTC' && !isKnownZoneName(zoneName)) {
       return this;
     }
 
