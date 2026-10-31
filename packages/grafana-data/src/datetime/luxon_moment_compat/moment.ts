@@ -736,6 +736,10 @@ function normalizeZoneName(name: string): string {
 
 const easyTzZoneCache = new Map<string, IANAZone>();
 
+function isKnownZoneName(name: string): boolean {
+  return easyTzZoneCache.has(name) || IANAZone.isValidZone(name);
+}
+
 class EasyTzZone extends IANAZone {
   override offsetName(timestamp: number, options: ZoneOffsetOptions) {
     if (options.format === 'short') {
@@ -758,7 +762,9 @@ function normalizeZone(zone: string | Zone): Zone {
   }
 
   const name = normalizeZoneName(zone);
-  if (name === 'UTC') {
+  // moment-timezone has no data for unknown names (e.g. Grafana's 'default'/'browser' sentinels)
+  // and keeps the moment in UTC instead of producing an invalid date
+  if (name === 'UTC' || !isKnownZoneName(name)) {
     return FixedOffsetZone.instance(0);
   }
 
@@ -1030,6 +1036,11 @@ class MomentCompat implements MomentLike {
   tz(zone?: string, keepLocalTime = false): string | undefined | MomentLike {
     if (zone == null) {
       return this._dt.zoneName ?? undefined;
+    }
+
+    // like moment-timezone, converting to a zone without data leaves the moment untouched
+    if (normalizeZoneName(zone) !== 'UTC' && !isKnownZoneName(normalizeZoneName(zone))) {
+      return this;
     }
 
     return this._setDt(this._dt.setZone(normalizeZone(zone), { keepLocalTime }));
